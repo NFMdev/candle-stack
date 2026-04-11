@@ -2,15 +2,14 @@ package com.github.nfmdev.candlestack.generator_service.domain.model;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
 public final class SimulationRuntimeState {
@@ -71,5 +70,27 @@ public final class SimulationRuntimeState {
 
     public Instant getStartedAt() {
         return startedAt;
+    }
+
+    public long getEmittedEvents() {
+        return emittedEvents.get();
+    }
+
+    public long getDeliveredEvents() {
+        return deliveredEvents.get();
+    }
+
+    public long getDeliveryFailures() {
+        return deliveryFailures.get();
+    }
+
+    public Map<String, BigDecimal> currentPricesSnapshot() {
+        return Map.copyOf(new HashMap<>(currentPrices));
+    }
+
+    public Map<String, Long> currentSequencesSnapshot() {
+        Map<String, Long> snapshot = new HashMap<>();
+        currentSequences.forEach((symbol, seq) -> snapshot.put(symbol, seq.get()));
+        return Map.copyOf(snapshot);
     }
 }

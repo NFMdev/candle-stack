@@ -1,13 +1,9 @@
 package com.github.nfmdev.candlestack.generator_service.domain.model;
 
-import java.util.Objects;
-
 public record DeliveryConfig (
      DeliveryMode mode,
      String ingestionBaseUrl,
      String endpointPath,
-     int batchSize,
-     int flushIntervalSeconds,
      int connectTimeoutMs,
      int readTimeoutMs
 ) {
