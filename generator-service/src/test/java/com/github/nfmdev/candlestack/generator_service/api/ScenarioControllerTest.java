@@ -25,6 +25,7 @@ import com.github.nfmdev.candlestack.generator_service.domain.model.DeliveryMode
 
 import tools.jackson.databind.ObjectMapper;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -110,6 +111,71 @@ class ScenarioControllerTest {
                 .andExpect(jsonPath("$.status").value("STOPPED"))
                 .andExpect(jsonPath("$.symbols[0].symbol").value("BTC-USD"))
                 .andExpect(jsonPath("$.delivery.mode").value("HTTP"));
+    }
+
+    @Test
+    void createShouldApplyDefaultDeliveryTimeoutsWhenOmitted() throws Exception {
+        UUID scenarioId = UUID.randomUUID();
+        Instant now = Instant.now();
+
+        ScenarioResponse response = new ScenarioResponse(
+                scenarioId,
+                "crypto-dev",
+                "STOPPED",
+                42L,
+                List.of(new SymbolConfigResponse(
+                        "BTC-USD",
+                        new BigDecimal("68000.00"),
+                        new BigDecimal("50000.00"),
+                        new BigDecimal("90000.00"),
+                        new BigDecimal("0.010000"),
+                        new BigDecimal("1.500000"),
+                        2,
+                        "USD"
+                )),
+                new DeliveryConfigResponse(
+                        "HTTP",
+                        "http://kafka:8081",
+                        "/api/v1/market-events",
+                        1000,
+                        2000
+                ),
+                now,
+                now
+        );
+
+        when(scenarioApplicationService.create(any(CreateScenarioRequest.class))).thenReturn(response);
+
+        String payload = """
+                {
+                  "name": "crypto-dev",
+                  "seed": 42,
+                  "symbols": [
+                    {
+                      "symbol": "BTC-USD",
+                      "initialPrice": 68000.00,
+                      "minPrice": 50000.00,
+                      "maxPrice": 90000.00,
+                      "minQuantity": 0.010000,
+                      "maxQuantity": 1.500000,
+                      "ticksPerSecond": 2,
+                      "currency": "USD"
+                    }
+                  ],
+                  "delivery": {
+                    "mode": "HTTP",
+                    "ingestionBaseUrl": "http://kafka:8081",
+                    "endpointPath": "/api/v1/market-events"
+                  }
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/scenarios")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.delivery.connectTimeoutMs").value(1000))
+                .andExpect(jsonPath("$.delivery.readTimeoutMs").value(2000));
     }
 
     @Test

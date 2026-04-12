@@ -5,10 +5,11 @@ import java.util.List;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 
 public record CreateScenarioRequest(
     @NotBlank String name,
     Long seed,
-    @NotEmpty List<CreateSymbolRequest> symbols,
-    @Valid CreateDeliveryRequest delivery
+    @NotEmpty List<@Valid CreateSymbolRequest> symbols,
+    @NotNull @Valid CreateDeliveryRequest delivery
 ) {}

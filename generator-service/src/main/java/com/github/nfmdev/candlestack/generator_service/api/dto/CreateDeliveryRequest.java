@@ -11,6 +11,18 @@ public record CreateDeliveryRequest(
     @NotBlank String ingestionBaseUrl,
     @NotBlank String endpointPath,
     // Keep timeouts for future use
-    @Min(100) int connectTimeoutMs,
-    @Min(100) int readTimeoutMs
-) {}
+    @Min(100) Integer connectTimeoutMs,
+    @Min(100) Integer readTimeoutMs
+) {
+    private static final int DEFAULT_CONNECT_TIMEOUT_MS = 1_000;
+    private static final int DEFAULT_READ_TIMEOUT_MS = 2_000;
+
+    public CreateDeliveryRequest {
+        if (connectTimeoutMs == null) {
+            connectTimeoutMs = DEFAULT_CONNECT_TIMEOUT_MS;
+        }
+        if (readTimeoutMs == null) {
+            readTimeoutMs = DEFAULT_READ_TIMEOUT_MS;
+        }
+    }
+}
