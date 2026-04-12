@@ -1,3 +1,37 @@
 spring:
   application:
     name: generator-service
+  jackson:
+    # COMMENTED OUT UNTIL CHECK IF FALSE BY DEFAULT
+    # datatype:
+    #   datetime:
+    #     '[WRITE_DATES_AS_TIMESTAMPS]': false
+    default-property-inclusion: NON_NULL
+server:
+  port: 8080
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+info:
+  app:
+    name: ${spring.application.name}
+    description: Candle Stack Generator Service
+    version: 0.0.1-SNAPSHOT
+
+logging:
+  level:
+    root: INFO
+    "[com.github.nfmdev.candlestack.generator_service]": INFO

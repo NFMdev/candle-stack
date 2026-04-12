@@ -1,0 +1,16 @@
+spring:
+  main:
+    banner-mode: off
+
+server:
+  port: 0
+
+management:
+  endpoints:
+    access:
+      default: none
+
+logging:
+  level:
+    root: WARN
+    "[com.github.nfmdev.candlestack.generator_service]": WARN
