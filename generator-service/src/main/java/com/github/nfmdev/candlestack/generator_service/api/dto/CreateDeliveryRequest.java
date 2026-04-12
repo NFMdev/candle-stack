@@ -10,6 +10,7 @@ public record CreateDeliveryRequest(
     @NotNull DeliveryMode mode,
     @NotBlank String ingestionBaseUrl,
     @NotBlank String endpointPath,
+    // Keep timeouts for future use
     @Min(100) int connectTimeoutMs,
     @Min(100) int readTimeoutMs
 ) {}

@@ -43,7 +43,7 @@ public class EventFactory {
             scenario.getId(), 
             SOURCE, 
             EVENT_TYPE, 
-            SOURCE,
+            symbolConfig.symbol(),
             Instant.now(),
             sequence,
             nextPrice,

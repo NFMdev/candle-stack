@@ -4,6 +4,7 @@ public record DeliveryConfigResponse(
     String mode,
     String ingestionBaseUrl,
     String endpointPath,
+    // Keep timeouts for future use
     int connectTimeoutMs,
     int readTimeoutMs
 ) {}
