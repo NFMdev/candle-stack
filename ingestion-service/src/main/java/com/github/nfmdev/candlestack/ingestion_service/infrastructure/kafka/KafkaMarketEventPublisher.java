@@ -4,6 +4,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.springframework.kafka.KafkaException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -38,7 +39,7 @@ public class KafkaMarketEventPublisher implements MarketEventPublisherPort {
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new EventPublishingException("Publishing interrupted", ex);
-        } catch (ExecutionException | TimeoutException ex) {
+        } catch (ExecutionException | TimeoutException | KafkaException ex) {
             throw new EventPublishingException("Failed to publish event to Kafka", ex);
         }
     }
