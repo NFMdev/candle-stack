@@ -1,3 +1,52 @@
 spring:
   application:
     name: ingestion-service
+  jackson:
+    default-property-inclusion: NON_NULL
+    datatype:
+      datetime:
+        "[WRITE_DATES_AS_TIMESTAMPS]": false
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      properties:
+        "[spring.json.add.type.headers]": false
+
+server:
+  port: 8081
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+candlestack:
+  kafka:
+    topics:
+      market-trades: market-trades
+
+info:
+  app:
+    name: ${spring.application.name}
+    description: Candle Stack ingestion-service
+    version: 0.0.1-SNAPSHOT
+
+logging:
+  level:
+    root: INFO
+    '[com.github.nfmdev.candlestack.ingestion_service]': INFO

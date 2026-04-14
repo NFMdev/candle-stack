@@ -1,0 +1,23 @@
+spring:
+  main:
+    banner-mode: off
+  kafka:
+    bootstrap-servers: localhost:9092
+
+server:
+  port: 0
+
+management:
+  endpoints:
+    access:
+      default: none
+
+candlestack:
+  kafka:
+    topics:
+      market-trades: test-market-trades
+
+logging:
+  level:
+    root: WARN
+    "[com.github.nfmdev.candlestack.ingestion_service]": WARN
