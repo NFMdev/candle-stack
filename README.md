@@ -10,9 +10,12 @@ Implemented now:
 - `ingestion-service`: validates incoming trade events and publishes them to Kafka
 - `compose.yaml`: starts Kafka plus the two active services for local development
 
-Scaffolded for later:
+Currently working:
 
 - `processing-service`: placeholder for stream processing and persistence
+
+Scaffolded for later:
+
 - `query-api`: placeholder for read APIs backed by PostgreSQL
 
 ## Repository layout
