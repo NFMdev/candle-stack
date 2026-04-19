@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.github.nfmdev.candlestack.processing_service.domain.mapper.TradeEventMapper;
+import com.github.nfmdev.candlestack.processing_service.domain.service.InstrumentNormalizer;
 import com.github.nfmdev.candlestack.processing_service.domain.service.InstrumentSnapshotCalculator;
 import com.github.nfmdev.candlestack.processing_service.domain.validation.TradeEventValidator;
 
@@ -17,8 +18,13 @@ public class ProcessingDomainConfig {
     }
 
     @Bean
-    public TradeEventMapper tradeEventMapper() {
-        return new TradeEventMapper();
+    public InstrumentNormalizer instrumentNormalizer() {
+        return new InstrumentNormalizer();
+    }
+
+    @Bean
+    public TradeEventMapper tradeEventMapper(InstrumentNormalizer instrumentNormalizer) {
+        return new TradeEventMapper(instrumentNormalizer);
     }
 
     @Bean

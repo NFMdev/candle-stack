@@ -44,7 +44,6 @@ public class TradeProcessingService {
         tradeEventValidator.validate(tradeEvent);
 
         InstrumentSnapshot currentSnapshot = stateStore.get(tradeEvent.instrumentId()).orElse(null);
-
         SnapshotUpdateResult updateResult = snapshotCalculator.apply(currentSnapshot, tradeEvent);
 
         if (!updateResult.applied()) {

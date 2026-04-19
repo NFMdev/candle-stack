@@ -1,5 +1,7 @@
 package com.github.nfmdev.candlestack.processing_service.persistence.adapter;
 
+import java.util.List;
+
 import org.springframework.stereotype.Component;
 
 import com.github.nfmdev.candlestack.processing_service.domain.model.InstrumentSnapshot;
@@ -19,6 +21,10 @@ public class InstrumentSnapshotPersistenceAdapter {
         repository.save(toEntity(snapshot));
     }
 
+    public List<InstrumentSnapshot> findAllSnapshots() {
+        return repository.findAll().stream().map(this::toDomain).toList();
+    }
+
     private InstrumentSnapshotEntity toEntity(InstrumentSnapshot snapshot) {
         InstrumentSnapshotEntity entity = new InstrumentSnapshotEntity();
         entity.setInstrumentId(snapshot.instrumentId());
@@ -34,5 +40,22 @@ public class InstrumentSnapshotPersistenceAdapter {
         entity.setUpdatedAt(snapshot.updatedAt());
         entity.setCurrency(snapshot.currency());
         return entity;
+    }
+
+    private InstrumentSnapshot toDomain(InstrumentSnapshotEntity entity) {
+        return new InstrumentSnapshot(
+            entity.getInstrumentId(),
+            entity.getLastEventId(),
+            entity.getTradingDate(),
+            entity.getLastPrice(),
+            entity.getLastQuantity(),
+            entity.getLastEventTime(),
+            entity.getDayVolume(),
+            entity.getDayHigh(),
+            entity.getDayLow(),
+            entity.getTradeCount(),
+            entity.getUpdatedAt(),
+            entity.getCurrency()
+        );
     }
 }

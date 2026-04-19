@@ -1,5 +1,6 @@
 package com.github.nfmdev.candlestack.processing_service.state;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -18,6 +19,16 @@ public class InstrumentStateStore {
 
     public void put(InstrumentSnapshot snapshot) {
         snapshots.put(snapshot.instrumentId(), snapshot);
+    }
+
+    public void putAll(Collection<InstrumentSnapshot> instrumentSnapshots) {
+        for (InstrumentSnapshot snapshot : instrumentSnapshots) {
+            snapshots.put(snapshot.instrumentId(), snapshot);
+        }
+    }
+
+    public void clear() {
+        snapshots.clear();
     }
 
     public void remove(String instrumentId) {
