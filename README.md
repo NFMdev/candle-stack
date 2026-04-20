@@ -32,7 +32,7 @@ generator-service
   -> POST /api/v1/market-events
   -> ingestion-service
   -> Kafka topic: market-trades
-  -> processing-service (planned)
+  -> processing-service
   -> query-api (planned)
 ```
 
@@ -83,9 +83,11 @@ Actuator endpoints are enabled on the active services. Examples:
 - `http://localhost:8080/actuator/prometheus`
 - `http://localhost:8081/actuator/health`
 - `http://localhost:8081/actuator/prometheus`
+- `http://localhost:8082/actuator/health`
+- `http://localhost:8082/actuator/prometheus`
 
 ## Notes on planned modules
 
-`processing-service` and `query-api` already exist as Spring Boot modules, but they are still scaffolds. Their presence reflects the intended end-state architecture, not current end-to-end functionality.
+`query-api` already exists as Spring Boot module, but it is still scaffold. Its presence reflects the intended end-state architecture, not current end-to-end functionality.
 
 `query-api/compose.yaml` also includes a PostgreSQL definition for future read-model work.
