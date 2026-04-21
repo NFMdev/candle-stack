@@ -24,19 +24,19 @@ public class TradeEventValidator {
 
     private void requireNonNull(Object value, String fieldName) {
         if (value == null) {
-            throw new InvalidTradeEventException(fieldName + " must Non be null");
+            throw new InvalidTradeEventException(fieldName + " must not be null");
         }
     }
 
     private void requireNonBlank(String value, String fieldName) {
         if (value == null || value.isBlank()) {
-            throw new InvalidTradeEventException(fieldName + " must Non be null or blank");
+            throw new InvalidTradeEventException(fieldName + " must not be null or blank");
         }
     }
 
     private void requirePositive(java.math.BigDecimal value, String fieldName) {
         if (value == null) {
-            throw new InvalidTradeEventException(fieldName + " must Non be null");
+            throw new InvalidTradeEventException(fieldName + " must not be null");
         }
         if (value.signum() <= 0) {
             throw new InvalidTradeEventException(fieldName + " must be > 0");
