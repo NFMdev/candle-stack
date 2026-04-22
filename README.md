@@ -1,4 +1,4 @@
-# candle-stack
+# Candle Stack
 
 Candle Stack is an event-driven market data playground built with Spring Boot, Kafka, Docker Compose, and a modular service layout. The current implementation focuses on generating simulated trade events, accepting them over HTTP, and publishing them to Kafka for downstream processing.
 
