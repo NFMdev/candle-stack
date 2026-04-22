@@ -52,7 +52,7 @@ public record MarketTradeEvent(
 
     private static BigDecimal requirePositive(BigDecimal value, String fieldName) {
         requireNonNull(value, fieldName);
-        if (value.compareTo(BigDecimal.ZERO) <= 0) {
+        if (value.signum() <= 0) {
             throw new IllegalArgumentException(fieldName + " must be greater than 0");
         }
         return value;

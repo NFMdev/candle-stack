@@ -17,7 +17,7 @@ import static org.mockito.Mockito.verify;
 
 class IngestionApplicationServiceTest {
     @Test
-    void ingestShoudPublishEventAndReturnAcceptedResponse() {
+    void ingestShouldPublishEventAndReturnAcceptedResponse() {
         MarketEventPublisherPort publisher =  Mockito.mock(MarketEventPublisherPort.class);
         IngestionApplicationService service = new IngestionApplicationService(publisher);
 

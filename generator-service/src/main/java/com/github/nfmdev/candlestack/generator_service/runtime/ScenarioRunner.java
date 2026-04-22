@@ -52,6 +52,7 @@ public final class ScenarioRunner {
                 periodMs,
                 TimeUnit.MILLISECONDS
             );
+            futures.add(future);
         }
     }
 
