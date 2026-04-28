@@ -89,5 +89,3 @@ Actuator endpoints are enabled on the active services. Examples:
 ## Notes on planned modules
 
 `query-api` already exists as Spring Boot module, but it is still scaffold. Its presence reflects the intended end-state architecture, not current end-to-end functionality.
-
-`query-api/compose.yaml` also includes a PostgreSQL definition for future read-model work.
