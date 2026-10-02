@@ -1,4 +1,4 @@
-package com.github.nfmdev.candlestack.generator_service.application;
+package com.github.nfmdev.candlestack.generator_service.api.service;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -72,7 +72,7 @@ public class ScenarioApplicationService {
 
     public ScenarioStatusResponse stop(UUID id) {
         SimulationScenario scenario = findScenario(id);
-        lifeCycleManager.stop(scenario);
+        lifeCycleManager.stop(id);
         scenarioRepository.save(scenario);
         return status(id);
     }
@@ -89,6 +89,8 @@ public class ScenarioApplicationService {
         return scenarioRepository.findById(id)
                 .orElseThrow(() -> new ScenarioNotFoundException(id));
     }
+
+    // TODO: Create mapper class
 
     private SymbolConfig toDomain(CreateSymbolRequest request) {
         return new SymbolConfig(
@@ -115,7 +117,7 @@ public class ScenarioApplicationService {
         return new ScenarioResponse(
                 scenario.getId(),
                 scenario.getName(),
-                scenario.getStatus().name(),
+                //scenario.getStatus().name(),
                 scenario.getSeed(),
                 scenario.getSymbols().stream().map(this::toResponse).toList(),
                 toResponse(scenario.getDeliveryConfig()),
@@ -127,7 +129,7 @@ public class ScenarioApplicationService {
         return new ScenarioSummaryResponse(
                 scenario.getId(),
                 scenario.getName(),
-                scenario.getStatus().name(),
+                //scenario.getStatus().name(),
                 scenario.getSymbols().size(),
                 scenario.getCreatedAt(),
                 scenario.getUpdatedAt());
@@ -136,7 +138,7 @@ public class ScenarioApplicationService {
     private ScenarioStatusResponse toStatusResponse(SimulationScenario scenario, SimulationRuntimeState runtime) {
         return new ScenarioStatusResponse(
                 scenario.getId(),
-                scenario.getStatus().name(),
+                //scenario.getStatus().name(),
                 runtime.getStartedAt(),
                 runtime.getEmittedEvents(),
                 runtime.getDeliveredEvents(),
@@ -154,7 +156,7 @@ public class ScenarioApplicationService {
 
         return new ScenarioStatusResponse(
                 scenario.getId(),
-                scenario.getStatus().name(),
+               // scenario.getStatus().name(),
                 null,
                 0L,
                 0L,

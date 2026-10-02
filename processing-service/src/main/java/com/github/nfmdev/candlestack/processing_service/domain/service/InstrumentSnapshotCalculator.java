@@ -14,10 +14,6 @@ import com.github.nfmdev.candlestack.processing_service.domain.model.UpdateDecis
 public class InstrumentSnapshotCalculator {
     private final Clock clock;
 
-    public InstrumentSnapshotCalculator() {
-        this(Clock.systemUTC());
-    }
-
     public InstrumentSnapshotCalculator(Clock clock) {
         this.clock = Objects.requireNonNull(clock, "clock cannot be null");
     }

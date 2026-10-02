@@ -7,7 +7,8 @@ import java.util.UUID;
 public record ScenarioResponse(
     UUID id,
     String name,
-    String status,
+    // TODO: How to retrieve scenario status
+    // String status,
     Long seed,
     List<SymbolConfigResponse> symbols,
     DeliveryConfigResponse delivery,

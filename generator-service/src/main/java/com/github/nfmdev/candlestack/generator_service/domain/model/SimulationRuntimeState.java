@@ -6,16 +6,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import lombok.Data;
 
-@Data
 public final class SimulationRuntimeState {
     private final UUID scenarioId;
     private final Instant startedAt;
-    private final AtomicBoolean running = new AtomicBoolean(true);
+    private volatile ScenarioStatus status = ScenarioStatus.RUNNING;
     private final AtomicLong emittedEvents = new AtomicLong(0);
     private final AtomicLong deliveredEvents = new AtomicLong(0);
     private final AtomicLong deliveryFailures = new AtomicLong(0);
@@ -57,11 +54,11 @@ public final class SimulationRuntimeState {
     }
 
     public void markStopped() {
-        running.set(false);
+        status = ScenarioStatus.STOPPED;
     }
 
     public boolean isRunning() {
-        return running.get();
+        return status == ScenarioStatus.RUNNING;
     }
 
     public UUID getScenarioId() {

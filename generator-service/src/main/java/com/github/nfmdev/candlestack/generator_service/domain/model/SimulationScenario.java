@@ -5,15 +5,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-import com.github.nfmdev.candlestack.generator_service.domain.exception.InvalidScenarioStateException;
-
-import lombok.Data;
-
-@Data
 public final class SimulationScenario {
     private final UUID id;
     private final String name;
-    private volatile ScenarioStatus status;
     private final List<SymbolConfig> symbols;
     private final DeliveryConfig deliveryConfig;
     private final Long seed;
@@ -43,22 +37,37 @@ public final class SimulationScenario {
         this.seed = seed;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt must not be null");
         this.updatedAt = Objects.requireNonNull(updatedAt, "updatedAt must not be null");
-        this.status = ScenarioStatus.STOPPED;
-    }
-    
-    public synchronized void start() {
-        if (status == ScenarioStatus.RUNNING) {
-            throw new InvalidScenarioStateException("Scenario is already running");
-        }
-        this.status = ScenarioStatus.RUNNING;
-        this.updatedAt = Instant.now();
     }
 
-    public synchronized void stop() {
-        if (status == ScenarioStatus.STOPPED) {
-            throw new InvalidScenarioStateException("Scenario is already stopped");
-        }
-        this.status = ScenarioStatus.STOPPED;
-        this.updatedAt = Instant.now();
+    public UUID getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public List<SymbolConfig> getSymbols() {
+        return symbols;
+    }
+
+    public DeliveryConfig getDeliveryConfig() {
+        return deliveryConfig;
+    }
+
+    public Long getSeed() {
+        return seed;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

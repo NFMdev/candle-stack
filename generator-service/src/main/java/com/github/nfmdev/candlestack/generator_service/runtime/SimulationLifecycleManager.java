@@ -35,8 +35,6 @@ public class SimulationLifecycleManager {
             throw new InvalidScenarioStateException("Scenario is already running");
         }
 
-        scenario.start();
-
         SimulationRuntimeState runtimeState = new SimulationRuntimeState(scenarioId, Instant.now());
         scenario.getSymbols().forEach(symbol -> runtimeState.initializeSymbol(symbol.symbol(), symbol.initialPrice()));
 
@@ -48,8 +46,9 @@ public class SimulationLifecycleManager {
         return runtimeState;
     }
 
-    public synchronized void stop(SimulationScenario scenario) {
-        UUID scenarioId = scenario.getId();
+    public synchronized void stop(UUID scenarioId) {
+        SimulationRuntimeState runtimeState = runtimeStates.get(scenarioId);
+        runtimeState.markStopped();
         ScenarioRunner runner = runners.remove(scenarioId);
 
         if (runner == null) {
@@ -57,7 +56,6 @@ public class SimulationLifecycleManager {
         }
 
         runner.stop();
-        scenario.stop();
     }
 
     public Optional<SimulationRuntimeState> runtimeState(UUID scenarioId) {

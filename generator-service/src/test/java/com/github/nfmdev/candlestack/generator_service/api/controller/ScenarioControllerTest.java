@@ -1,4 +1,4 @@
-package com.github.nfmdev.candlestack.generator_service.api;
+package com.github.nfmdev.candlestack.generator_service.api.controller;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -6,31 +6,31 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.github.nfmdev.candlestack.generator_service.api.GlobalExceptionHandler;
 import com.github.nfmdev.candlestack.generator_service.api.dto.CreateDeliveryRequest;
 import com.github.nfmdev.candlestack.generator_service.api.dto.CreateScenarioRequest;
 import com.github.nfmdev.candlestack.generator_service.api.dto.CreateSymbolRequest;
 import com.github.nfmdev.candlestack.generator_service.api.dto.DeliveryConfigResponse;
 import com.github.nfmdev.candlestack.generator_service.api.dto.ScenarioResponse;
 import com.github.nfmdev.candlestack.generator_service.api.dto.SymbolConfigResponse;
-import com.github.nfmdev.candlestack.generator_service.application.ScenarioApplicationService;
+import com.github.nfmdev.candlestack.generator_service.api.service.ScenarioApplicationService;
 import com.github.nfmdev.candlestack.generator_service.domain.exception.ScenarioNotFoundException;
 import com.github.nfmdev.candlestack.generator_service.domain.model.DeliveryMode;
 
 import tools.jackson.databind.ObjectMapper;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ScenarioController.class)
 @Import(GlobalExceptionHandler.class)

@@ -6,7 +6,8 @@ import java.util.UUID;
 public record ScenarioSummaryResponse(
     UUID id,
     String name,
-    String status,
+    // TODO: How to receive scenario status
+    // String status,
     int symbolCount,
     Instant createdAt,
     Instant updatedAt
