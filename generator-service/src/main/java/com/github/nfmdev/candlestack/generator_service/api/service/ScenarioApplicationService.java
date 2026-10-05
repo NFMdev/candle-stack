@@ -44,6 +44,7 @@ public class ScenarioApplicationService {
                 UUID.randomUUID(),
                 request.name(),
                 request.symbols().stream().map(this::toDomain).toList(),
+                request.loadProfile(),
                 toDomain(request.delivery()),
                 request.seed(),
                 now,
@@ -100,7 +101,7 @@ public class ScenarioApplicationService {
                 request.maxPrice(),
                 request.minQuantity(),
                 request.maxQuantity(),
-                request.ticksPerSecond(),
+                request.loadWeight(),
                 request.currency());
     }
 
@@ -173,7 +174,7 @@ public class ScenarioApplicationService {
                 symbol.maxPrice(),
                 symbol.minQuantity(),
                 symbol.maxQuantity(),
-                symbol.ticksPerSecond(),
+                symbol.loadWeight(),
                 symbol.currency());
     }
 

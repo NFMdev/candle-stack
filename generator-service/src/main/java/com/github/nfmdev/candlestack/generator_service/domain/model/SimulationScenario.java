@@ -9,6 +9,7 @@ public final class SimulationScenario {
     private final UUID id;
     private final String name;
     private final List<SymbolConfig> symbols;
+    private final LoadConfig loadConfig;
     private final DeliveryConfig deliveryConfig;
     private final Long seed;
     private final Instant createdAt;
@@ -18,6 +19,7 @@ public final class SimulationScenario {
         UUID id,
         String name,
         List<SymbolConfig> symbols,
+        LoadConfig loadProfile,
         DeliveryConfig deliveryConfig,
         Long seed,
         Instant createdAt,
@@ -33,6 +35,7 @@ public final class SimulationScenario {
 
         this.name = name;
         this.symbols = symbols;
+        this.loadConfig = Objects.requireNonNull(loadProfile, "load profile must not be null");
         this.deliveryConfig = Objects.requireNonNull(deliveryConfig, "delivery must not be null");
         this.seed = seed;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt must not be null");
@@ -49,6 +52,10 @@ public final class SimulationScenario {
 
     public List<SymbolConfig> getSymbols() {
         return symbols;
+    }
+
+    public LoadConfig getLoadConfig() {
+        return loadConfig;
     }
 
     public DeliveryConfig getDeliveryConfig() {

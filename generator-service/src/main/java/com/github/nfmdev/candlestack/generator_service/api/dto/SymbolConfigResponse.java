@@ -9,6 +9,6 @@ public record SymbolConfigResponse(
     BigDecimal maxPrice,
     BigDecimal minQuantity,
     BigDecimal maxQuantity,
-    int ticksPerSecond,
+    double loadWeight,
     String currency
 ) {}

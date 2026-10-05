@@ -1,8 +1,6 @@
 package com.github.nfmdev.candlestack.generator_service.runtime;
 
-import java.util.List;
 import java.util.Random;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -19,6 +17,7 @@ import com.github.nfmdev.candlestack.generator_service.domain.ports.EventDeliver
 
 public final class ScenarioRunner {
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(ScenarioRunner.class);
+    private static final long TICK_INTERVAL_MS = 10;
 
     private final SimulationScenario scenario;
     private final SimulationRuntimeState runtimeState;
@@ -26,7 +25,9 @@ public final class ScenarioRunner {
     private final EventDeliveryPort eventDeliveryPort;
     private final Random random;
     private final ScheduledExecutorService scheduler;
-    private final List<ScheduledFuture<?>> futures = new CopyOnWriteArrayList<>();
+    private final RateController rateController;
+    private final WeightedRandomSymbolSelector symbolSelector;
+    private ScheduledFuture<?> generationTask;
 
     public ScenarioRunner(
         SimulationScenario scenario,
@@ -39,36 +40,52 @@ public final class ScenarioRunner {
         this.eventFactory = eventFactory;
         this.eventDeliveryPort = eventDeliveryPort;
         this.random = new Random(resolveSeed(scenario));
-        this.scheduler = Executors.newScheduledThreadPool(Math.max(1, scenario.getSymbols().size()));
+        this.scheduler = Executors.newSingleThreadScheduledExecutor();
+        this.rateController = new RateController(scenario.getLoadConfig().eventsPerSecond());
+        this.symbolSelector = new WeightedRandomSymbolSelector(scenario.getSymbols(), random); 
     }
 
     public void start() {
-        for (SymbolConfig symbolConfig : scenario.getSymbols()) {
-            long periodMs = Math.max(1L, 1000L / symbolConfig.ticksPerSecond());
+        rateController.start();
 
-            ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(
-                () -> emit(symbolConfig),
-                0L,
-                periodMs,
-                TimeUnit.MILLISECONDS
-            );
-            futures.add(future);
-        }
+        generationTask = scheduler.scheduleAtFixedRate(
+            this::tick,
+            0L,
+            TICK_INTERVAL_MS,
+            TimeUnit.MILLISECONDS
+        );
     }
 
     public void stop() {
         runtimeState.markStopped();
-        for (ScheduledFuture<?> future : futures) {
-            future.cancel(false);
+        if (generationTask != null) {
+            generationTask.cancel(false);
         }
         scheduler.shutdown();
     }
 
-    private void emit(SymbolConfig symbolConfig) {
+    private void tick() {
         if (!runtimeState.isRunning()) {
             return;
         }
 
+        var eventsDue = rateController.eventsDue();
+        var generated = 0L;
+
+        for (long i = 0; i < eventsDue; i++) {
+            if (!runtimeState.isRunning()) {
+                break;
+            }
+
+            var symbolConfig = symbolSelector.next();
+            emit(symbolConfig);
+            generated ++;
+        }
+
+        rateController.recordGenerated(generated);
+    }
+
+    private void emit(SymbolConfig symbolConfig) {
         try {
             MarketTradeEvent event = eventFactory.createTrade(scenario, symbolConfig, runtimeState, random);
             runtimeState.incrementEmitted();

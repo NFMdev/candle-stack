@@ -37,7 +37,40 @@ I have changed the status control from SimulationScenario to SimulationRuntimeSt
 #### Scenario Runner
 Manages scenarios, event creation and delivery.
 
+### Infrastructure
+#### HttpIngestionClient
+Implementation of `EventDeliveryPort` used to emit trade events. Since `HttpIngestionClient` is the only implementation, any reference to its parent interface will be automatically treated as HttpIngestionClient.
+
+
 #### SimulationLifecycleManager
 Manages runners and scenario states
 
 ## Ingestion Service
+Ingestion Service is the actual kafka producer which ingests from simulated clients (generator-service instances) and publishes to kafka "market-trades" topic.
+### Domain
+#### MarketTradeEvent
+`MarketTradeEvent` class is the basic trading event model
+#### TradeSide
+`TradeSide` enum defines the two different sides of trading "SELL" and "BUY"
+#### MarketEventPublisherPort
+`MarketEventPublisherPort` interface with publishing method for kafka messages
+
+### Infrastructure
+#### KafkaMarketEventPublisher
+Class implementation for `MarketEventPublisherPort`
+
+### Config
+#### KafkaTopicsProperties
+Kafka topic definition and representation
+
+## Processing Service
+Currently Processing Service stores one snapshot for every different trading instrument with important informtion: instrumentId, lastEventId, tradingDate, lastPrice, lastQuantity, lastEventTime, dayVolume, dayHigh, dayLow, tradeCount, updatedAt and currency
+
+### Domain
+#### Instrument Snapshot
+`InstrumentSnapshot` class stores relevant information of specific instrument at specific time
+#### Update Decision
+`UpdateDecision` enum defines different possible results for trade processing and snapshot update
+#### SnapshotUpdateResult
+Joins information from `InstrumentSnapshot` and `UpdateDecision` separating instrument definition from its state
+

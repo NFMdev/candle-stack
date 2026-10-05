@@ -2,6 +2,8 @@ package com.github.nfmdev.candlestack.generator_service.api.dto;
 
 import java.util.List;
 
+import com.github.nfmdev.candlestack.generator_service.domain.model.LoadConfig;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -11,5 +13,6 @@ public record CreateScenarioRequest(
     @NotBlank String name,
     Long seed,
     @NotEmpty List<@Valid CreateSymbolRequest> symbols,
+    @NotNull @Valid LoadConfig loadProfile,
     @NotNull @Valid CreateDeliveryRequest delivery
 ) {}

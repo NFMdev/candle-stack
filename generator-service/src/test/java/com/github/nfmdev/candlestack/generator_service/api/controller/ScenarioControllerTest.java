@@ -77,7 +77,7 @@ class ScenarioControllerTest {
         ScenarioResponse response = new ScenarioResponse(
                 scenarioId,
                 "trade-dev",
-                "STOPPED",
+                // "STOPPED",
                 42L,
                 List.of(new SymbolConfigResponse(
                         "BTC-USD",
@@ -121,7 +121,7 @@ class ScenarioControllerTest {
         ScenarioResponse response = new ScenarioResponse(
                 scenarioId,
                 "crypto-dev",
-                "STOPPED",
+                // "STOPPED",
                 42L,
                 List.of(new SymbolConfigResponse(
                         "BTC-USD",

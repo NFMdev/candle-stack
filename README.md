@@ -8,11 +8,12 @@ Implemented now:
 
 - `generator-service`: creates and runs simulation scenarios, then delivers generated trade events over HTTP
 - `ingestion-service`: validates incoming trade events and publishes them to Kafka
-- `compose.yaml`: starts Kafka plus the two active services for local development
+- `processing-service`: consumes Kafka trade events, maintains one daily snapshot per instrument, and persists snapshots to PostgreSQL
+- `compose.yaml`: starts Kafka, PostgreSQL, and all three pipeline services for local development
 
-Currently working:
+Processing currently normalizes and validates trade events, ignores duplicate and out-of-order updates, tracks last trade, daily volume, high/low, and count, and reloads persisted snapshots on startup before consuming Kafka messages.
 
-- `processing-service`: placeholder for stream processing and persistence
+It does not yet build time-bucketed OHLC candles or expose a read API. The current persisted model is an instrument-level daily snapshot.
 
 Scaffolded for later:
 
@@ -53,27 +54,32 @@ docker compose up --build
 This starts:
 
 - Kafka on `localhost:29092`
+- PostgreSQL on `localhost:5432`
 - `generator-service` on `localhost:8080`
 - `ingestion-service` on `localhost:8081`
+- `processing-service` on `localhost:8082`
 
 ## Run services locally without Docker
 
-Each module has its own Maven wrapper. Typical local startup for the active services:
+Start Kafka and PostgreSQL first (for example, with Docker Compose), then run the services locally:
 
 ```bash
-cd ingestion-service
-./mvnw spring-boot:run
+mvn -pl ingestion-service spring-boot:run
 ```
 
 ```bash
-cd generator-service
-./mvnw spring-boot:run
+mvn -pl generator-service spring-boot:run
+```
+
+```bash
+mvn -pl processing-service spring-boot:run
 ```
 
 By default:
 
 - `ingestion-service` connects to Kafka at `localhost:29092`
 - `generator-service` expects you to point each scenario at the ingestion base URL you want to use
+- `processing-service` connects to Kafka at `localhost:29092` and PostgreSQL at `localhost:5432` (database `candlestack`)
 
 ## Observability
 
