@@ -5,12 +5,15 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.github.nfmdev.candlestack.generator_service.domain.engine.fault.FaultConfig;
+
 public final class SimulationScenario {
     private final UUID id;
     private final String name;
     private final List<SymbolConfig> symbols;
-    private final LoadConfig loadConfig;
+    private LoadConfig loadConfig;
     private final DeliveryConfig deliveryConfig;
+    private FaultConfig faultConfig;
     private final Long seed;
     private final Instant createdAt;
     private volatile Instant updatedAt;
@@ -19,8 +22,9 @@ public final class SimulationScenario {
         UUID id,
         String name,
         List<SymbolConfig> symbols,
-        LoadConfig loadProfile,
+        LoadConfig loadConfig,
         DeliveryConfig deliveryConfig,
+        FaultConfig faultConfig,
         Long seed,
         Instant createdAt,
         Instant updatedAt
@@ -35,8 +39,9 @@ public final class SimulationScenario {
 
         this.name = name;
         this.symbols = symbols;
-        this.loadConfig = Objects.requireNonNull(loadProfile, "load profile must not be null");
+        this.loadConfig = Objects.requireNonNull(loadConfig, "load profile must not be null");
         this.deliveryConfig = Objects.requireNonNull(deliveryConfig, "delivery must not be null");
+        this.faultConfig = faultConfig != null ? faultConfig : FaultConfig.none();
         this.seed = seed;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt must not be null");
         this.updatedAt = Objects.requireNonNull(updatedAt, "updatedAt must not be null");
@@ -60,6 +65,10 @@ public final class SimulationScenario {
 
     public DeliveryConfig getDeliveryConfig() {
         return deliveryConfig;
+    }
+
+    public FaultConfig getFaultConfig() {
+        return faultConfig;
     }
 
     public Long getSeed() {

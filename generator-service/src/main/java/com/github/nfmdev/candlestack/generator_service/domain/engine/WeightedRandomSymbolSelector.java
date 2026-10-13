@@ -1,9 +1,9 @@
-package com.github.nfmdev.candlestack.generator_service.runtime;
+package com.github.nfmdev.candlestack.generator_service.domain.engine;
 
 import java.util.List;
 import java.util.Random;
 
-import com.github.nfmdev.candlestack.generator_service.domain.engine.SymbolSelector;
+import com.github.nfmdev.candlestack.generator_service.domain.engine.inter.SymbolSelector;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SymbolConfig;
 
 public final class WeightedRandomSymbolSelector implements SymbolSelector {

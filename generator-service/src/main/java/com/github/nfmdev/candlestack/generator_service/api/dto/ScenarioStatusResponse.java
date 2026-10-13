@@ -7,8 +7,7 @@ import java.util.UUID;
 
 public record ScenarioStatusResponse(
     UUID id,
-    // TODO: How to retrieve scenario status
-    // String status,
+    String status,
     Instant startedAt,
     long  emittedEvents,
     long deliveredEvents,

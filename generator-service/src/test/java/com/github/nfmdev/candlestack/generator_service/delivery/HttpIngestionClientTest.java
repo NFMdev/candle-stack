@@ -1,29 +1,30 @@
 package com.github.nfmdev.candlestack.generator_service.delivery;
 
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.restclient.test.autoconfigure.RestClientTest;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.github.nfmdev.candlestack.generator_service.domain.model.DeliveryConfig;
 import com.github.nfmdev.candlestack.generator_service.domain.model.DeliveryMode;
+import com.github.nfmdev.candlestack.generator_service.domain.model.LoadConfig;
 import com.github.nfmdev.candlestack.generator_service.domain.model.MarketTradeEvent;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationScenario;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SymbolConfig;
 import com.github.nfmdev.candlestack.generator_service.domain.model.TradeSide;
 import com.github.nfmdev.candlestack.generator_service.infrastructure.delivery.HttpIngestionClient;
-
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
-
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 @RestClientTest(HttpIngestionClient.class)
 class HttpIngestionClientTest {
@@ -64,6 +65,7 @@ class HttpIngestionClientTest {
                                 "USD"
                         )
                 ),
+                new LoadConfig(1000, 5000, Duration.ZERO),
                 new DeliveryConfig(
                         DeliveryMode.HTTP,
                         "http://localhost:8081",
@@ -71,6 +73,7 @@ class HttpIngestionClientTest {
                         1000,
                         2000
                 ),
+                null,
                 42L,
                 now,
                 now
@@ -89,7 +92,8 @@ class HttpIngestionClientTest {
                 new BigDecimal("68123.45"),
                 new BigDecimal("0.245000"),
                 TradeSide.BUY,
-                "USD"
+                "USD",
+                null
         );
     }
 }

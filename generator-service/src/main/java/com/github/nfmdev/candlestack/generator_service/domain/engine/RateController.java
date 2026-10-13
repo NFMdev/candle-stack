@@ -1,4 +1,4 @@
-package com.github.nfmdev.candlestack.generator_service.runtime;
+package com.github.nfmdev.candlestack.generator_service.domain.engine;
 
 public final class RateController {
     private static final long MAX_EVENTS_PER_TICK = 10_000L;
@@ -23,10 +23,8 @@ public final class RateController {
 
     public long eventsDue() {
         long elapsedNanos = System.nanoTime() - startNanos;
-
-        double elapsedSeconds = elapsedNanos / 1_000_000_000.0;
         
-        long expectedEvents = (long) (elapsedSeconds * eventsPerSecond);
+        long expectedEvents = (long) ((elapsedNanos / 1_000_000_000.0) * eventsPerSecond);
 
         var due = expectedEvents - generatedEvents;
 

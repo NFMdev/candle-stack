@@ -1,6 +1,7 @@
 package com.github.nfmdev.candlestack.generator_service.api.service;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -13,6 +14,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.github.nfmdev.candlestack.generator_service.api.dto.CreateDeliveryRequest;
+import com.github.nfmdev.candlestack.generator_service.api.dto.CreateFaultConfigRequest;
+import com.github.nfmdev.candlestack.generator_service.api.dto.CreateLoadConfigRequest;
 import com.github.nfmdev.candlestack.generator_service.api.dto.CreateScenarioRequest;
 import com.github.nfmdev.candlestack.generator_service.api.dto.CreateSymbolRequest;
 import com.github.nfmdev.candlestack.generator_service.api.dto.ScenarioResponse;
@@ -98,13 +101,15 @@ class ScenarioApplicationServiceTest {
                         "USD"
                     )
                 ),
+                new CreateLoadConfigRequest(1000, 5000, Duration.ZERO),
                 new CreateDeliveryRequest(
                     DeliveryMode.HTTP,
                     "http://localhost:8081",
                     "/api/v1/market-events",
                     1000,
                     2000
-                )
+                ),
+                new CreateFaultConfigRequest(0, 0, Duration.ZERO)
         );
     }
 

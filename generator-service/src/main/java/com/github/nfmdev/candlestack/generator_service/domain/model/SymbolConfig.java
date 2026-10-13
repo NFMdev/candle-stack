@@ -31,8 +31,8 @@ public record SymbolConfig (
         if (initialPrice.compareTo(minPrice) < 0 || initialPrice.compareTo(maxPrice) > 0) {
             throw new IllegalArgumentException("initialPrice must be between minPrice and maxPrice");
         }
-        if (loadWeight <= 0.0) {
-            throw new IllegalArgumentException("load weight must be greater than 0");
+        if (!Double.isFinite(loadWeight) || loadWeight <= 0.0) {
+            throw new IllegalArgumentException("load weight a finite positive number");
         }
     }
 

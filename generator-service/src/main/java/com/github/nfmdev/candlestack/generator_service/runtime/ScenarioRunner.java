@@ -1,19 +1,28 @@
 package com.github.nfmdev.candlestack.generator_service.runtime;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 
 import com.github.nfmdev.candlestack.generator_service.domain.engine.EventFactory;
+import com.github.nfmdev.candlestack.generator_service.domain.engine.RateController;
+import com.github.nfmdev.candlestack.generator_service.domain.engine.WeightedRandomSymbolSelector;
+import com.github.nfmdev.candlestack.generator_service.domain.engine.fault.FaultDecider;
+import com.github.nfmdev.candlestack.generator_service.domain.engine.fault.FaultDecision;
+import com.github.nfmdev.candlestack.generator_service.domain.engine.inter.PayloadGenerator;
 import com.github.nfmdev.candlestack.generator_service.domain.model.MarketTradeEvent;
+import com.github.nfmdev.candlestack.generator_service.domain.model.ScenarioStatus;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationRuntimeState;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationScenario;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SymbolConfig;
-import com.github.nfmdev.candlestack.generator_service.domain.ports.EventDeliveryPort;
+import com.github.nfmdev.candlestack.generator_service.runtime.delivery.StripedDeliveryDispatcher;
 
 public final class ScenarioRunner {
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(ScenarioRunner.class);
@@ -21,47 +30,75 @@ public final class ScenarioRunner {
 
     private final SimulationScenario scenario;
     private final SimulationRuntimeState runtimeState;
+
     private final EventFactory eventFactory;
-    private final EventDeliveryPort eventDeliveryPort;
-    private final Random random;
-    private final ScheduledExecutorService scheduler;
+
+    private final Random eventRandom;
+    private final Random symbolSelectRandom;
+    private final Random faultRandom;
+
     private final RateController rateController;
     private final WeightedRandomSymbolSelector symbolSelector;
+    private final PayloadGenerator payloadGenerator;
+    private final FaultDecider faultDecisionEngine;
+
+    private final StripedDeliveryDispatcher deliveryDispatcher;
+
+    private final ScheduledExecutorService generationScheduler;
+    private final ScheduledExecutorService completionScheduler;
     private ScheduledFuture<?> generationTask;
+    private ScheduledFuture<?> completionTask;
+
+    private final AtomicBoolean terminated = new AtomicBoolean(false);
+
+    private final Runnable onCompleted;
 
     public ScenarioRunner(
         SimulationScenario scenario,
         SimulationRuntimeState runtimeState,
         EventFactory eventFactory,
-        EventDeliveryPort eventDeliveryPort
+        PayloadGenerator payloadGenerator,
+        StripedDeliveryDispatcher deliveryDispatcher,
+        Runnable onCompleted
     ) {
+        long seed = resolveSeed(scenario);
+
         this.scenario = scenario;
         this.runtimeState = runtimeState;
         this.eventFactory = eventFactory;
-        this.eventDeliveryPort = eventDeliveryPort;
-        this.random = new Random(resolveSeed(scenario));
-        this.scheduler = Executors.newSingleThreadScheduledExecutor();
+        this.eventRandom = new Random(seed);
+        this.symbolSelectRandom = new Random(seed ^ 0x9E3779B97F4A7C15L);
+        this.faultRandom = new Random(seed ^ 0xD1B54A32D192ED03L);
+        this.generationScheduler = Executors.newSingleThreadScheduledExecutor();
+        this.completionScheduler = Executors.newSingleThreadScheduledExecutor();
         this.rateController = new RateController(scenario.getLoadConfig().eventsPerSecond());
-        this.symbolSelector = new WeightedRandomSymbolSelector(scenario.getSymbols(), random); 
+        this.symbolSelector = new WeightedRandomSymbolSelector(scenario.getSymbols(), symbolSelectRandom); 
+        this.payloadGenerator = payloadGenerator;
+        this.deliveryDispatcher = deliveryDispatcher;
+        this.faultDecisionEngine = new FaultDecider(faultRandom);
+        this.onCompleted = onCompleted;
     }
 
     public void start() {
         rateController.start();
 
-        generationTask = scheduler.scheduleAtFixedRate(
+        generationTask = generationScheduler.scheduleAtFixedRate(
             this::tick,
             0L,
             TICK_INTERVAL_MS,
             TimeUnit.MILLISECONDS
         );
+
+        scheduleCompletion();
     }
 
     public void stop() {
-        runtimeState.markStopped();
-        if (generationTask != null) {
-            generationTask.cancel(false);
-        }
-        scheduler.shutdown();
+        terminate(ScenarioStatus.STOPPED);
+    }
+
+    public void complete() {
+        boolean completed = terminate(ScenarioStatus.COMPLETED);
+        if (completed) onCompleted.run();
     }
 
     private void tick() {
@@ -79,7 +116,7 @@ public final class ScenarioRunner {
 
             var symbolConfig = symbolSelector.next();
             emit(symbolConfig);
-            generated ++;
+            generated++;
         }
 
         rateController.recordGenerated(generated);
@@ -87,18 +124,90 @@ public final class ScenarioRunner {
 
     private void emit(SymbolConfig symbolConfig) {
         try {
-            MarketTradeEvent event = eventFactory.createTrade(scenario, symbolConfig, runtimeState, random);
+            FaultDecision decision = faultDecisionEngine.decide(scenario.getFaultConfig());
+            Instant eventTime = Instant.now().minus(decision.delay());
+            if (decision.duplicate()) runtimeState.incrementDuplicates();
+            if (decision.delay().isPositive()) runtimeState.incrementDelayedEvents();
+            
+            MarketTradeEvent event = eventFactory.createTrade(scenario, symbolConfig, runtimeState, eventRandom, payloadGenerator, eventTime);
             runtimeState.incrementEmitted();
 
-            eventDeliveryPort.deliver(scenario, event);
-            runtimeState.incrementDelivered();
+            var accepted = deliveryDispatcher.dispatch(
+                scenario,
+                event,
+                runtimeState,
+                decision.deliveryCount(),
+                scenario.getLoadConfig().payloadSizeBytes()
+            );
+
+            if (!accepted) {
+                log.warn(
+                    "Event rejected by delivery dispatcher: scenario={} symbol={} event={}",
+                    scenario.getId(),
+                    event.symbol(),
+                    event.eventId()
+                );
+            }
         } catch (Exception e) {
-            runtimeState.incrementFailures();
+            runtimeState.incrementDeliveryFailures();
             log.warn("Failed to emit/deliver event for scenario={} and symbol={}", scenario.getId(), symbolConfig.symbol(), e);
         }
     }
 
     private long resolveSeed(SimulationScenario scenario) {
         return scenario.getSeed() != null ? scenario.getSeed() : System.nanoTime();
+    }
+
+    private void scheduleCompletion() {
+        Duration duration = scenario.getLoadConfig().duration();
+
+        if (duration.isZero()) {
+            return;
+        }
+
+        completionTask = completionScheduler.schedule(
+            this::complete,
+            duration.toNanos(),
+            TimeUnit.NANOSECONDS
+        );
+    }
+
+    private boolean terminate(ScenarioStatus reason) {
+        if (!terminated.compareAndSet(false, true)) {
+            return false;
+        }
+
+        if (generationTask != null) generationTask.cancel(false);
+        if (completionTask != null && reason != ScenarioStatus.COMPLETED) {
+            completionTask.cancel(false);
+        }
+
+        runtimeState.markDraining();
+
+        try {
+            deliveryDispatcher.awaitScenarioDrained(scenario.getId());
+
+            if (reason == ScenarioStatus.COMPLETED) {
+                runtimeState.markCompleted();
+            } else {
+                runtimeState.markStopped();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread()
+                .interrupt();
+
+            runtimeState.markFailed();
+
+            log.warn(
+                "Interrupted while draining scenario={}",
+                scenario.getId(),
+                e
+            );
+        }
+
+        generationScheduler.shutdown();
+        completionScheduler.shutdown();
+
+        return true;
     }
 }

@@ -16,7 +16,8 @@ public record MarketTradeEvent(
      BigDecimal price,
      BigDecimal quantity,
      TradeSide side,
-     String currency
+     String currency,
+     String syntheticPayload
 ) {
     public MarketTradeEvent {
         requireNonNull(eventId, "eventId");
@@ -30,27 +31,28 @@ public record MarketTradeEvent(
         requirePositive(quantity, "quantity");
         requireNonNull(side, "side");
         requireNonBlank(currency, "currency");
+
     }
 
-    private static <T> T requireNonNull(T value, String fieldName) {
+    private <T> T requireNonNull(T value, String fieldName) {
         return Objects.requireNonNull(value, fieldName + " must not be null");
     }
 
-    private static String requireNonBlank(String value, String fieldName) {
+    private String requireNonBlank(String value, String fieldName) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(fieldName + " cannot be null or blank");
         }
         return value;
     }
 
-    private static long requirePositive(long value, String fieldName) {
+    private long requirePositive(long value, String fieldName) {
         if (value <= 0) {
             throw new IllegalArgumentException(fieldName + " must be greater than 0");
         }
         return value;
     }
 
-    private static BigDecimal requirePositive(BigDecimal value, String fieldName) {
+    private BigDecimal requirePositive(BigDecimal value, String fieldName) {
         requireNonNull(value, fieldName);
         if (value.signum() <= 0) {
             throw new IllegalArgumentException(fieldName + " must be greater than 0");
