@@ -171,7 +171,7 @@ class ScenarioControllerTest {
                   },
                   "delivery": {
                     "mode": "HTTP",
-                    "ingestionBaseUrl": "http://kafka:8081",
+                    "ingestionBaseUrl": "http://localhost:8081",
                     "endpointPath": "/api/v1/market-events",
                     "connectTimeoutMs": 1000,
                     "readTimeoutMs": 2000

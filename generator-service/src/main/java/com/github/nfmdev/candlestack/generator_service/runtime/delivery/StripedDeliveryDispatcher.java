@@ -20,6 +20,7 @@ import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationRu
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationScenario;
 import com.github.nfmdev.candlestack.generator_service.domain.ports.EventDeliveryPort;
 import com.github.nfmdev.candlestack.generator_service.infrastructure.config.DeliveryExecutorProperties;
+import com.github.nfmdev.candlestack.generator_service.infrastructure.observability.GeneratorMetrics;
 
 import jakarta.annotation.PreDestroy;
 
@@ -38,12 +39,16 @@ public final class StripedDeliveryDispatcher {
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     private final ConcurrentHashMap<UUID, ScenarioDeliveryTracker> scenarioTrackers = new ConcurrentHashMap<>();
 
+    private final GeneratorMetrics metrics;
+
     public StripedDeliveryDispatcher(
             EventDeliveryPort eventDeliveryPort,
-            DeliveryExecutorProperties properties
+            DeliveryExecutorProperties properties,
+            GeneratorMetrics metrics
     ) {
         this.eventDeliveryPort = eventDeliveryPort;
         this.properties = properties;
+        this.metrics = metrics;
 
         this.lanes
                 = new ThreadPoolExecutor[properties.lanes()];
@@ -75,6 +80,7 @@ public final class StripedDeliveryDispatcher {
         if (!reserveBytes(estimatedPayloadBytes)) {
             runtimeState.incrementRejected();
             runtimeState.incrementByteBudgetRejected();
+            metrics.byteBudgetRejected();
 
             log.warn(
                     "Delivery rejected due to outstanding payload byte limit: scenario={} event={} outstandingBytes={} requestedBytes={}",
@@ -118,6 +124,7 @@ public final class StripedDeliveryDispatcher {
             );
 
             runtimeState.incrementEnqueued();
+            metrics.eventEnqueued();
 
             return true;
 
@@ -130,6 +137,7 @@ public final class StripedDeliveryDispatcher {
 
             runtimeState.incrementRejected();
             runtimeState.incrementQueueRejected();
+            metrics.queueRejected();
 
             log.warn(
                     "Delivery queue full: scenario={} symbol={} event={} lane={} queueDepth={}",
@@ -218,9 +226,11 @@ public final class StripedDeliveryDispatcher {
             );
 
             request.runtimeState().incrementDelivered();
+            metrics.deliverySucceeded();
 
         } catch (Exception e) {
             request.runtimeState().incrementDeliveryFailures();
+            metrics.deliveryFailed();
 
             log.warn(
                     "HTTP event delivery failed: scenario={} symbol={} event={}",

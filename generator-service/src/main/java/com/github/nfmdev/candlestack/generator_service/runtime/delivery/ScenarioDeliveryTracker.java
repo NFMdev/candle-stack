@@ -15,6 +15,8 @@ final class ScenarioDeliveryTracker {
         }
 
         pending--;
+
+        if (pending == 0) notifyAll();
     }
 
     public synchronized long pending() {

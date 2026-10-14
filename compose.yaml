@@ -68,6 +68,10 @@ services:
       - ingestion-service
     environment:
       SERVER_PORT: 8080
+      GENERATOR_DELIVERY_LANES: 8
+      GENERATOR_DELIVERY_QUEUE_CAPACITY_PER_LANE: 1000
+      GENERATOR_DELIVERY_MAX_OUTSTANDING_PAYLOAD_BYTES: 67108864
+      GENERATOR_DELIVERY_SHUTDOWN_TIMEOUT: PT30S
     ports:
       - "8080:8080"
     restart: unless-stopped

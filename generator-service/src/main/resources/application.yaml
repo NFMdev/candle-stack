@@ -10,7 +10,7 @@ spring:
 
 generator:
   delivery:
-    lanes: 1
+    lanes: 8
     queue-capacity-per-lane: 100
     max-outstanding-payload-bytes: 10000
     shutdownTimeout: PT5M

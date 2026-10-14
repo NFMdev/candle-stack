@@ -34,7 +34,8 @@ public class IngestionApplicationService {
             request.price(),
             request.quantity(),
             request.side(),
-            request.currency()
+            request.currency(),
+            request.syntheticPayload()
         );
     }
 }

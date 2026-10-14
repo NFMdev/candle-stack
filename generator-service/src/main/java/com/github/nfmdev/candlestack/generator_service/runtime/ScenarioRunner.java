@@ -22,6 +22,7 @@ import com.github.nfmdev.candlestack.generator_service.domain.model.ScenarioStat
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationRuntimeState;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationScenario;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SymbolConfig;
+import com.github.nfmdev.candlestack.generator_service.infrastructure.observability.GeneratorMetrics;
 import com.github.nfmdev.candlestack.generator_service.runtime.delivery.StripedDeliveryDispatcher;
 
 public final class ScenarioRunner {
@@ -53,13 +54,16 @@ public final class ScenarioRunner {
 
     private final Runnable onCompleted;
 
+    private final GeneratorMetrics metrics;
+
     public ScenarioRunner(
         SimulationScenario scenario,
         SimulationRuntimeState runtimeState,
         EventFactory eventFactory,
         PayloadGenerator payloadGenerator,
         StripedDeliveryDispatcher deliveryDispatcher,
-        Runnable onCompleted
+        Runnable onCompleted,
+        GeneratorMetrics metrics
     ) {
         long seed = resolveSeed(scenario);
 
@@ -77,6 +81,7 @@ public final class ScenarioRunner {
         this.deliveryDispatcher = deliveryDispatcher;
         this.faultDecisionEngine = new FaultDecider(faultRandom);
         this.onCompleted = onCompleted;
+        this.metrics = metrics;
     }
 
     public void start() {
@@ -126,11 +131,19 @@ public final class ScenarioRunner {
         try {
             FaultDecision decision = faultDecisionEngine.decide(scenario.getFaultConfig());
             Instant eventTime = Instant.now().minus(decision.delay());
-            if (decision.duplicate()) runtimeState.incrementDuplicates();
-            if (decision.delay().isPositive()) runtimeState.incrementDelayedEvents();
             
             MarketTradeEvent event = eventFactory.createTrade(scenario, symbolConfig, runtimeState, eventRandom, payloadGenerator, eventTime);
             runtimeState.incrementEmitted();
+            metrics.eventEmitted();
+
+            if (decision.duplicate()) {
+                runtimeState.incrementDuplicates();
+                metrics.duplicateEvent();
+            }
+            if (decision.delay().isPositive()) {
+                runtimeState.incrementDelayedEvents();
+                metrics.delayedEvent();
+            }
 
             var accepted = deliveryDispatcher.dispatch(
                 scenario,
@@ -177,14 +190,27 @@ public final class ScenarioRunner {
             return false;
         }
 
-        if (generationTask != null) generationTask.cancel(false);
+        runtimeState.markDraining();
+
+        if (generationTask != null) {
+            generationTask.cancel(false);
+        }
         if (completionTask != null && reason != ScenarioStatus.COMPLETED) {
             completionTask.cancel(false);
         }
 
-        runtimeState.markDraining();
+        generationScheduler.shutdown();
 
         try {
+            if (!generationScheduler.awaitTermination(30, TimeUnit.SECONDS)) {
+                log.warn(
+                    "Timed out waiting for generation to stop: scenario={}",
+                    scenario.getId()
+                );
+                runtimeState.markFailed();
+                return true;
+            }
+
             deliveryDispatcher.awaitScenarioDrained(scenario.getId());
 
             if (reason == ScenarioStatus.COMPLETED) {
@@ -193,20 +219,18 @@ public final class ScenarioRunner {
                 runtimeState.markStopped();
             }
         } catch (InterruptedException e) {
-            Thread.currentThread()
-                .interrupt();
-
+            Thread.currentThread().interrupt();
             runtimeState.markFailed();
 
             log.warn(
-                "Interrupted while draining scenario={}",
+                "Interrupted while terminating scenario={}",
                 scenario.getId(),
                 e
             );
+        } finally {
+            generationScheduler.shutdownNow();
+            completionScheduler.shutdown();
         }
-
-        generationScheduler.shutdown();
-        completionScheduler.shutdown();
 
         return true;
     }

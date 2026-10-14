@@ -13,6 +13,7 @@ import com.github.nfmdev.candlestack.generator_service.domain.engine.inter.Paylo
 import com.github.nfmdev.candlestack.generator_service.domain.exception.InvalidScenarioStateException;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationRuntimeState;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationScenario;
+import com.github.nfmdev.candlestack.generator_service.infrastructure.observability.GeneratorMetrics;
 import com.github.nfmdev.candlestack.generator_service.runtime.delivery.StripedDeliveryDispatcher;
 
 import jakarta.annotation.PreDestroy;
@@ -27,14 +28,18 @@ public class SimulationLifecycleManager {
     private final Map<UUID, ScenarioRunner> runners = new ConcurrentHashMap<>();
     private final Map<UUID, SimulationRuntimeState> runtimeStates = new ConcurrentHashMap<>();
 
+    GeneratorMetrics metrics;
+
     public SimulationLifecycleManager(
         EventFactory eventFactory,
         PayloadGenerator payloadGenerator,
-        StripedDeliveryDispatcher deliveryDispatcher
+        StripedDeliveryDispatcher deliveryDispatcher,
+        GeneratorMetrics metrics
     ) {
         this.eventFactory = eventFactory;
         this.payloadGenerator = payloadGenerator;
         this.deliveryDispatcher = deliveryDispatcher;
+        this.metrics = metrics;
     }
 
     public synchronized SimulationRuntimeState start(SimulationScenario scenario) {
@@ -52,7 +57,8 @@ public class SimulationLifecycleManager {
             eventFactory,
             payloadGenerator,
             deliveryDispatcher,
-            () -> runners.remove(scenarioId)
+            () -> runners.remove(scenarioId),
+            metrics
         );
         runtimeStates.put(scenarioId, runtimeState);
         runners.put(scenarioId, runner);
