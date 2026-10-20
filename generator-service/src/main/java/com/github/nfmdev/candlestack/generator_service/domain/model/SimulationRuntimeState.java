@@ -6,19 +6,24 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import lombok.Data;
 
-@Data
 public final class SimulationRuntimeState {
     private final UUID scenarioId;
     private final Instant startedAt;
-    private final AtomicBoolean running = new AtomicBoolean(true);
-    private final AtomicLong emittedEvents = new AtomicLong(0);
-    private final AtomicLong deliveredEvents = new AtomicLong(0);
+    private volatile ScenarioStatus status = ScenarioStatus.RUNNING;
+
+    private final AtomicLong emitted = new AtomicLong();
+    private final AtomicLong enqueued = new AtomicLong();
+    private final AtomicLong rejected = new AtomicLong();
+    private final AtomicLong queueRejected = new AtomicLong();
+    private final AtomicLong byteBudgetRejected = new AtomicLong();
+    private final AtomicLong delivered = new AtomicLong();
     private final AtomicLong deliveryFailures = new AtomicLong(0);
+    private final AtomicLong duplicates = new AtomicLong(0);
+    private final AtomicLong delayedEvents = new AtomicLong(0);
+
     private final Map<String, BigDecimal> currentPrices = new ConcurrentHashMap<>();
     private final Map<String, AtomicLong> currentSequences = new ConcurrentHashMap<>();
 
@@ -45,23 +50,71 @@ public final class SimulationRuntimeState {
     }
 
     public void incrementEmitted() {
-        emittedEvents.incrementAndGet();
+        emitted.incrementAndGet();
+    }
+
+    public void incrementEnqueued() {
+        enqueued.incrementAndGet();
+    }
+
+    public void incrementRejected() {
+        rejected.incrementAndGet();
+    }
+
+    public void incrementQueueRejected() {
+        queueRejected.incrementAndGet();
+    }
+
+    public void incrementByteBudgetRejected() {
+        byteBudgetRejected.incrementAndGet();
     }
 
     public void incrementDelivered() {
-        deliveredEvents.incrementAndGet();
+        delivered.incrementAndGet();
     }
 
-    public void incrementFailures() {
+    public void incrementDeliveryFailures() {
         deliveryFailures.incrementAndGet();
     }
 
+    public void incrementDuplicates() {
+        duplicates.incrementAndGet();
+    }
+
+    public void incrementDelayedEvents() {
+        delayedEvents.incrementAndGet();
+    }
+
+    public void markCreated() {
+        status = ScenarioStatus.CREATED;
+    }
+    
+    public void markRunning() {
+        status = ScenarioStatus.RUNNING;
+    }
+
+    public void markDraining() {
+        status = ScenarioStatus.DRAINING;
+    }
+
     public void markStopped() {
-        running.set(false);
+        status = ScenarioStatus.STOPPED;
+    }
+
+    public void markCompleted() {
+        status = ScenarioStatus.COMPLETED;
+    }
+
+    public void markFailed() {
+        status = ScenarioStatus.FAILED;
     }
 
     public boolean isRunning() {
-        return running.get();
+        return status == ScenarioStatus.RUNNING;
+    }
+
+    public String getScenarioStatus() {
+        return status.name();
     }
 
     public UUID getScenarioId() {
@@ -72,16 +125,40 @@ public final class SimulationRuntimeState {
         return startedAt;
     }
 
-    public long getEmittedEvents() {
-        return emittedEvents.get();
+    public long getEmitted() {
+        return emitted.get();
     }
 
-    public long getDeliveredEvents() {
-        return deliveredEvents.get();
+    public long getEnqueued() {
+        return enqueued.get();
+    }
+
+    public long getRejected() {
+        return rejected.get();
+    }
+
+    public long getQueueRejected() {
+        return queueRejected.get();
+    }
+
+    public long getbyteBudgetRejected() {
+        return byteBudgetRejected.get();
+    }
+
+    public long getDelivered() {
+        return delivered.get();
     }
 
     public long getDeliveryFailures() {
         return deliveryFailures.get();
+    }
+
+    public long getDuplicates() {
+        return duplicates.get();
+    }
+
+    public long getDelayedEvents() {
+        return delayedEvents.get();
     }
 
     public Map<String, BigDecimal> currentPricesSnapshot() {

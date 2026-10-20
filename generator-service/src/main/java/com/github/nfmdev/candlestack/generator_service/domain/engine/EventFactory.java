@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
+import com.github.nfmdev.candlestack.generator_service.domain.engine.inter.PayloadGenerator;
 import com.github.nfmdev.candlestack.generator_service.domain.model.MarketTradeEvent;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationRuntimeState;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationScenario;
@@ -24,7 +25,9 @@ public class EventFactory {
         SimulationScenario scenario,
         SymbolConfig symbolConfig,
         SimulationRuntimeState runtimeState,
-        Random random
+        Random random,
+        PayloadGenerator payloadGenerator,
+        Instant eventTime
     ) {
         BigDecimal currentPrice = runtimeState.currenPrice(symbolConfig.symbol());
         if (currentPrice == null) {
@@ -35,6 +38,7 @@ public class EventFactory {
         BigDecimal quantity = nextQuantity(symbolConfig, random);
         TradeSide side = random.nextBoolean() ? TradeSide.BUY :  TradeSide.SELL;
         long sequence = runtimeState.nextSequence(symbolConfig.symbol());
+        String payload = payloadGenerator.generate(scenario.getLoadConfig().payloadSizeBytes());
 
         runtimeState.updateCurrentPrice(symbolConfig.symbol(), nextPrice);
 
@@ -44,12 +48,13 @@ public class EventFactory {
             SOURCE, 
             EVENT_TYPE, 
             symbolConfig.symbol(),
-            Instant.now(),
+            eventTime,
             sequence,
             nextPrice,
             quantity,
             side,
-            symbolConfig.currency()
+            symbolConfig.currency(),
+            payload
         );
     }
 

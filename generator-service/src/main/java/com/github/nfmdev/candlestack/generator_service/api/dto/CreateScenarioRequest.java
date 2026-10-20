@@ -11,5 +11,7 @@ public record CreateScenarioRequest(
     @NotBlank String name,
     Long seed,
     @NotEmpty List<@Valid CreateSymbolRequest> symbols,
-    @NotNull @Valid CreateDeliveryRequest delivery
+    @NotNull @Valid CreateLoadConfigRequest loadConfig,
+    @NotNull @Valid CreateDeliveryRequest delivery,
+    @Valid CreateFaultConfigRequest faultConfig
 ) {}

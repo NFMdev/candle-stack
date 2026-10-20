@@ -9,24 +9,37 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
 
 import com.github.nfmdev.candlestack.generator_service.domain.engine.EventFactory;
+import com.github.nfmdev.candlestack.generator_service.domain.engine.inter.PayloadGenerator;
 import com.github.nfmdev.candlestack.generator_service.domain.exception.InvalidScenarioStateException;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationRuntimeState;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationScenario;
-import com.github.nfmdev.candlestack.generator_service.domain.ports.EventDeliveryPort;
+import com.github.nfmdev.candlestack.generator_service.infrastructure.observability.GeneratorMetrics;
+import com.github.nfmdev.candlestack.generator_service.runtime.delivery.StripedDeliveryDispatcher;
 
 import jakarta.annotation.PreDestroy;
 
 @Component
 public class SimulationLifecycleManager {
+
     private final EventFactory eventFactory;
-    private final EventDeliveryPort deliveryPort;
+    private final PayloadGenerator payloadGenerator;
+    private final StripedDeliveryDispatcher deliveryDispatcher;
 
     private final Map<UUID, ScenarioRunner> runners = new ConcurrentHashMap<>();
     private final Map<UUID, SimulationRuntimeState> runtimeStates = new ConcurrentHashMap<>();
 
-    public SimulationLifecycleManager(EventFactory eventFactory, EventDeliveryPort deliveryPort) {
+    GeneratorMetrics metrics;
+
+    public SimulationLifecycleManager(
+        EventFactory eventFactory,
+        PayloadGenerator payloadGenerator,
+        StripedDeliveryDispatcher deliveryDispatcher,
+        GeneratorMetrics metrics
+    ) {
         this.eventFactory = eventFactory;
-        this.deliveryPort = deliveryPort;
+        this.payloadGenerator = payloadGenerator;
+        this.deliveryDispatcher = deliveryDispatcher;
+        this.metrics = metrics;
     }
 
     public synchronized SimulationRuntimeState start(SimulationScenario scenario) {
@@ -35,12 +48,18 @@ public class SimulationLifecycleManager {
             throw new InvalidScenarioStateException("Scenario is already running");
         }
 
-        scenario.start();
-
         SimulationRuntimeState runtimeState = new SimulationRuntimeState(scenarioId, Instant.now());
         scenario.getSymbols().forEach(symbol -> runtimeState.initializeSymbol(symbol.symbol(), symbol.initialPrice()));
 
-        ScenarioRunner runner = new ScenarioRunner(scenario, runtimeState, eventFactory, deliveryPort);
+        ScenarioRunner runner = new ScenarioRunner(
+            scenario,
+            runtimeState,
+            eventFactory,
+            payloadGenerator,
+            deliveryDispatcher,
+            () -> runners.remove(scenarioId),
+            metrics
+        );
         runtimeStates.put(scenarioId, runtimeState);
         runners.put(scenarioId, runner);
 
@@ -48,8 +67,7 @@ public class SimulationLifecycleManager {
         return runtimeState;
     }
 
-    public synchronized void stop(SimulationScenario scenario) {
-        UUID scenarioId = scenario.getId();
+    public synchronized void stop(UUID scenarioId) {
         ScenarioRunner runner = runners.remove(scenarioId);
 
         if (runner == null) {
@@ -57,7 +75,6 @@ public class SimulationLifecycleManager {
         }
 
         runner.stop();
-        scenario.stop();
     }
 
     public Optional<SimulationRuntimeState> runtimeState(UUID scenarioId) {
@@ -69,6 +86,5 @@ public class SimulationLifecycleManager {
         runners.values().forEach(ScenarioRunner::stop);
         runners.clear();
     }
-
 
 }

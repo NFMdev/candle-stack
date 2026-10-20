@@ -1,4 +1,4 @@
-package com.github.nfmdev.candlestack.generator_service.application;
+package com.github.nfmdev.candlestack.generator_service.api.service;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -10,6 +10,8 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import com.github.nfmdev.candlestack.generator_service.api.dto.CreateDeliveryRequest;
+import com.github.nfmdev.candlestack.generator_service.api.dto.CreateFaultConfigRequest;
+import com.github.nfmdev.candlestack.generator_service.api.dto.CreateLoadConfigRequest;
 import com.github.nfmdev.candlestack.generator_service.api.dto.CreateScenarioRequest;
 import com.github.nfmdev.candlestack.generator_service.api.dto.CreateSymbolRequest;
 import com.github.nfmdev.candlestack.generator_service.api.dto.DeliveryConfigResponse;
@@ -17,8 +19,10 @@ import com.github.nfmdev.candlestack.generator_service.api.dto.ScenarioResponse;
 import com.github.nfmdev.candlestack.generator_service.api.dto.ScenarioStatusResponse;
 import com.github.nfmdev.candlestack.generator_service.api.dto.ScenarioSummaryResponse;
 import com.github.nfmdev.candlestack.generator_service.api.dto.SymbolConfigResponse;
+import com.github.nfmdev.candlestack.generator_service.domain.engine.fault.FaultConfig;
 import com.github.nfmdev.candlestack.generator_service.domain.exception.ScenarioNotFoundException;
 import com.github.nfmdev.candlestack.generator_service.domain.model.DeliveryConfig;
+import com.github.nfmdev.candlestack.generator_service.domain.model.LoadConfig;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationRuntimeState;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationScenario;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SymbolConfig;
@@ -44,7 +48,9 @@ public class ScenarioApplicationService {
                 UUID.randomUUID(),
                 request.name(),
                 request.symbols().stream().map(this::toDomain).toList(),
+                toDomain(request.loadConfig()),
                 toDomain(request.delivery()),
+                toDomain(request.faultConfig()),
                 request.seed(),
                 now,
                 now);
@@ -72,7 +78,7 @@ public class ScenarioApplicationService {
 
     public ScenarioStatusResponse stop(UUID id) {
         SimulationScenario scenario = findScenario(id);
-        lifeCycleManager.stop(scenario);
+        lifeCycleManager.stop(id);
         scenarioRepository.save(scenario);
         return status(id);
     }
@@ -90,6 +96,8 @@ public class ScenarioApplicationService {
                 .orElseThrow(() -> new ScenarioNotFoundException(id));
     }
 
+    // TODO: Create mapper class
+
     private SymbolConfig toDomain(CreateSymbolRequest request) {
         return new SymbolConfig(
                 request.symbol(),
@@ -98,7 +106,7 @@ public class ScenarioApplicationService {
                 request.maxPrice(),
                 request.minQuantity(),
                 request.maxQuantity(),
-                request.ticksPerSecond(),
+                request.loadWeight(),
                 request.currency());
     }
 
@@ -111,11 +119,27 @@ public class ScenarioApplicationService {
                 request.readTimeoutMs());
     }
 
+    private LoadConfig toDomain(CreateLoadConfigRequest request) {
+        return new LoadConfig(
+                request.eventsPerSecond(),
+                request.payloadSizeBytes(),
+                request.duration()
+        );
+    }
+
+    private FaultConfig toDomain(CreateFaultConfigRequest request) {
+        return new FaultConfig(
+                request.duplicateProbability(),
+                request.outOfOrderProbability(),
+                request.maxDelay()
+        );
+    }
+
     private ScenarioResponse toResponse(SimulationScenario scenario) {
         return new ScenarioResponse(
                 scenario.getId(),
                 scenario.getName(),
-                scenario.getStatus().name(),
+                null,
                 scenario.getSeed(),
                 scenario.getSymbols().stream().map(this::toResponse).toList(),
                 toResponse(scenario.getDeliveryConfig()),
@@ -127,7 +151,7 @@ public class ScenarioApplicationService {
         return new ScenarioSummaryResponse(
                 scenario.getId(),
                 scenario.getName(),
-                scenario.getStatus().name(),
+                //scenario.getStatus().name(),
                 scenario.getSymbols().size(),
                 scenario.getCreatedAt(),
                 scenario.getUpdatedAt());
@@ -136,10 +160,10 @@ public class ScenarioApplicationService {
     private ScenarioStatusResponse toStatusResponse(SimulationScenario scenario, SimulationRuntimeState runtime) {
         return new ScenarioStatusResponse(
                 scenario.getId(),
-                scenario.getStatus().name(),
+                runtime.getScenarioStatus(),
                 runtime.getStartedAt(),
-                runtime.getEmittedEvents(),
-                runtime.getDeliveredEvents(),
+                runtime.getEmitted(),
+                runtime.getDelivered(),
                 runtime.getDeliveryFailures(),
                 runtime.currentPricesSnapshot(),
                 runtime.currentSequencesSnapshot());
@@ -154,7 +178,7 @@ public class ScenarioApplicationService {
 
         return new ScenarioStatusResponse(
                 scenario.getId(),
-                scenario.getStatus().name(),
+               null,
                 null,
                 0L,
                 0L,
@@ -171,7 +195,7 @@ public class ScenarioApplicationService {
                 symbol.maxPrice(),
                 symbol.minQuantity(),
                 symbol.maxQuantity(),
-                symbol.ticksPerSecond(),
+                symbol.loadWeight(),
                 symbol.currency());
     }
 

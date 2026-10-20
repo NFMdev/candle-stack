@@ -21,5 +21,6 @@ public record MarketTradeEventRequest(
     @NotNull @Positive BigDecimal price,
     @NotNull @Positive BigDecimal quantity,
     @NotNull TradeSide side,
-    @NotBlank String currency
+    @NotBlank String currency,
+    String syntheticPayload
 ) {}

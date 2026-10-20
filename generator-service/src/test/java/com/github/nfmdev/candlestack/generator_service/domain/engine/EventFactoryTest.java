@@ -1,21 +1,24 @@
 package com.github.nfmdev.candlestack.generator_service.domain.engine;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
+import com.github.nfmdev.candlestack.generator_service.domain.engine.fault.FaultConfig;
+import com.github.nfmdev.candlestack.generator_service.domain.engine.payload.ReusablePayloadGenerator;
 import com.github.nfmdev.candlestack.generator_service.domain.model.DeliveryConfig;
 import com.github.nfmdev.candlestack.generator_service.domain.model.DeliveryMode;
+import com.github.nfmdev.candlestack.generator_service.domain.model.LoadConfig;
 import com.github.nfmdev.candlestack.generator_service.domain.model.MarketTradeEvent;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationRuntimeState;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SimulationScenario;
 import com.github.nfmdev.candlestack.generator_service.domain.model.SymbolConfig;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class EventFactoryTest {;
     private final EventFactory eventFactory = new EventFactory();
@@ -26,8 +29,9 @@ class EventFactoryTest {;
         SimulationScenario scenario = scenario(symbol);
         SimulationRuntimeState runtimeState = new SimulationRuntimeState(scenario.getId(), Instant.now());
         runtimeState.initializeSymbol(symbol.symbol(), symbol.initialPrice());
+        ReusablePayloadGenerator payloadGenerator = ReusablePayloadGenerator.getInstance();
 
-        MarketTradeEvent event = eventFactory.createTrade(scenario, symbol, runtimeState, new Random(42));
+        MarketTradeEvent event = eventFactory.createTrade(scenario, symbol, runtimeState, new Random(42), payloadGenerator, Instant.now());
 
         assertThat(event.eventId()).isNotNull();
         assertThat(event.scenarioId()).isEqualTo(scenario.getId());
@@ -45,9 +49,10 @@ class EventFactoryTest {;
         SimulationScenario scenario = scenario(symbol);
         SimulationRuntimeState runtimeState = new SimulationRuntimeState(scenario.getId(), Instant.now());
         runtimeState.initializeSymbol(symbol.symbol(), symbol.initialPrice());
+        ReusablePayloadGenerator payloadGenerator = ReusablePayloadGenerator.getInstance();
 
-        MarketTradeEvent first = eventFactory.createTrade(scenario, symbol, runtimeState, new Random(7));
-        MarketTradeEvent second = eventFactory.createTrade(scenario, symbol, runtimeState, new Random(8));
+        MarketTradeEvent first = eventFactory.createTrade(scenario, symbol, runtimeState, new Random(7), payloadGenerator, Instant.now());
+        MarketTradeEvent second = eventFactory.createTrade(scenario, symbol, runtimeState, new Random(8), payloadGenerator, Instant.now());
 
         assertThat(first.sequence()).isEqualTo(1L);
         assertThat(second.sequence()).isEqualTo(2L);
@@ -72,6 +77,7 @@ class EventFactoryTest {;
             UUID.randomUUID(),
             "trade-dev",
             List.of(symbol),
+            new LoadConfig(1000, 5000, Duration.ZERO),
             new DeliveryConfig(
                 DeliveryMode.HTTP,
                 "http://localhost:8081",
@@ -79,6 +85,7 @@ class EventFactoryTest {;
                 1000,
                 2000
             ),
+            new FaultConfig(0, 0, Duration.ZERO),
             42L,
             now,
             now

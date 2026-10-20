@@ -16,7 +16,8 @@ public record MarketTradeEvent(
     BigDecimal price,
     BigDecimal quantity,
     TradeSide side,
-    String currency
+    String currency,
+    String syntheticPayload
 ) {
     public MarketTradeEvent {
         requireNonNull(eventId, "eventId");

@@ -2,6 +2,13 @@ spring:
   main:
     banner-mode: off
 
+generator:
+    delivery:
+      lanes: 1
+      queue-capacity-per-lane: 100
+      max-outstanding-payload-bytes: 10000
+      shutdownTimeout: PT5M
+
 server:
   port: 0
 
