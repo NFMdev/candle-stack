@@ -24,7 +24,7 @@ public class MarketTradeKafkaListener {
     }
 
     @KafkaListener(
-            topics = "${app.kafka.topics.market-trades}",
+            topics = "${candlestack.kafka.topics.market-trades}",
             groupId = "${spring.kafka.consumer.group-id}",
             containerFactory = "marketTradeKafkaListenerContainerFactory",
             autoStartup = "false"

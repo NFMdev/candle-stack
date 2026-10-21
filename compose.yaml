@@ -1,19 +1,20 @@
-volumes:
-  postgres_data:
 
 services:
+  # =========================
+  # Infrastructure
+  # =========================
+
   kafka:
     image: apache/kafka:4.2.0
-    container_name: candle-stack-kafka
     hostname: kafka
     ports:
-      - "29092:29092"
+      - "127.0.0.1:29092:29092"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
 
-      KAFKA_LISTENERS: PLAINTEXT://kafka:9092,CONTROLLER://kafka:9093,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,PLAINTEXT_HOST://:29092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
@@ -23,86 +24,139 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka_data:/var/lib/kafka/data
     restart: unless-stopped
 
   postgres:
     image: postgres:18-alpine
-    container_name: candle-stack-postgres
     hostname: postgres
     environment:
       POSTGRES_DB: candlestack
       POSTGRES_USER: candlestack_user
-      POSTGRES_PASSWORD: candlestack_password
-    command:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U candlestack_user"]
+      test:
+        - CMD-SHELL
+        - pg_isready -U candlestack_user -d candlestack
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  # =========================
+  # Application
+  # =========================
 
   ingestion-service:
     build:
       context: .
       dockerfile: ingestion-service/Dockerfile
-    container_name: candle-stack-ingestion-service
     depends_on:
       - kafka
     environment:
-      SERVER_PORT: 8081
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       CANDLESTACK_KAFKA_TOPICS_MARKET_TRADES: market-trades
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     restart: unless-stopped
 
   generator-service:
     build:
       context: .
       dockerfile: generator-service/Dockerfile
-    container_name: candle-stack-generator-service
     depends_on:
       - ingestion-service
     environment:
-      SERVER_PORT: 8080
       GENERATOR_DELIVERY_LANES: 8
       GENERATOR_DELIVERY_QUEUE_CAPACITY_PER_LANE: 1000
       GENERATOR_DELIVERY_MAX_OUTSTANDING_PAYLOAD_BYTES: 67108864
       GENERATOR_DELIVERY_SHUTDOWN_TIMEOUT: PT30S
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     restart: unless-stopped
 
   processing-service:
     build:
       context: .
       dockerfile: processing-service/Dockerfile
-    container_name: candle-stack-processing-service
     depends_on:
-      - kafka
-      - postgres
+      kafka:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     environment:
-      SERVER_PORT: 8082
-      # Kafka
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_KAFKA_CONSUMER_GROUP_ID: processing-service
       SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET: earliest
       CANDLESTACK_KAFKA_TOPICS_MARKET_TRADES: market-trades
-      # Postgres
+
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/candlestack
       SPRING_DATASOURCE_USERNAME: candlestack_user
-      SPRING_DATASOURCE_PASSWORD: candlestack_password
-      
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
-
-      SPRING_FLYWAY_ENABLED: true
-
+      SPRING_FLYWAY_ENABLED: "true"
     ports:
-      - "8082:8082"
+      - "127.0.0.1:8082:8082"
     restart: unless-stopped
 
+  # =========================
+  # Observability
+  # =========================
 
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:13.2.4
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?Set GRAFANA_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.60.6
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  kafka_data:
+  prometheus_data:
+  grafana_data:

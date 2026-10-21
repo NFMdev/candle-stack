@@ -1,9 +1,13 @@
 package com.github.nfmdev.candlestack.generator_service.infrastructure.observability;
 
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+
 import org.springframework.stereotype.Component;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 
 @Component 
 public final class GeneratorMetrics {
@@ -19,6 +23,9 @@ public final class GeneratorMetrics {
 
     private final Counter duplicateEvents;
     private final Counter delayedEvents;
+
+    private final Timer deliveryDuration;
+    private final Timer queueWaitDuration;
 
     public GeneratorMetrics(MeterRegistry registry) {
         this.emittedEvents = Counter
@@ -65,6 +72,20 @@ public final class GeneratorMetrics {
             .builder("generator.delayed.events")
             .description("Logical events generated with an intentionally late timestamp")
             .register(registry);
+
+        this.deliveryDuration = Timer.builder("generator.delivery.duration")
+            .description("Duration of individual HTTP delivery attempts")
+            .publishPercentileHistogram()
+            .minimumExpectedValue(Duration.ofMillis(1))
+            .maximumExpectedValue(Duration.ofSeconds(10))
+            .register(registry);
+
+        this.queueWaitDuration = Timer.builder("generator.delivery.queue.wait")
+            .description("Time spent waiting for a delivery lane worker")
+            .publishPercentileHistogram()
+            .minimumExpectedValue(Duration.ofMillis(1))
+            .maximumExpectedValue(Duration.ofSeconds(10))
+            .register(registry);
     }
 
     public void eventEmitted() {
@@ -101,5 +122,13 @@ public final class GeneratorMetrics {
 
     public void delayedEvent() {
         delayedEvents.increment();
+    }
+
+    public void recordDeliveryDuration(long durationNanos) {
+        deliveryDuration.record(durationNanos, TimeUnit.NANOSECONDS);
+    }
+
+    public void recordQueueWaitDuration(long durationNanos) {
+        queueWaitDuration.record(durationNanos, TimeUnit.NANOSECONDS);
     }
 }

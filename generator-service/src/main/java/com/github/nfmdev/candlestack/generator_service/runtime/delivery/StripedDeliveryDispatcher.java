@@ -50,8 +50,7 @@ public final class StripedDeliveryDispatcher {
         this.properties = properties;
         this.metrics = metrics;
 
-        this.lanes
-                = new ThreadPoolExecutor[properties.lanes()];
+        this.lanes = new ThreadPoolExecutor[properties.lanes()];
 
         for (int i = 0; i < lanes.length; i++) {
             lanes[i] = createLane(i);
@@ -67,6 +66,7 @@ public final class StripedDeliveryDispatcher {
     ) {
         if (shuttingDown.get()) {
             runtimeState.incrementRejected();
+            metrics.deliveryRejected();
 
             log.warn(
                     "Delivery rejected because dispatcher is shutting down: scenario={} event={}",
@@ -80,6 +80,7 @@ public final class StripedDeliveryDispatcher {
         if (!reserveBytes(estimatedPayloadBytes)) {
             runtimeState.incrementRejected();
             runtimeState.incrementByteBudgetRejected();
+            metrics.deliveryRejected();
             metrics.byteBudgetRejected();
 
             log.warn(
@@ -116,10 +117,12 @@ public final class StripedDeliveryDispatcher {
         );
 
         try {
+            long enqueuedAtNanos = System.nanoTime();
             lanes[laneIndex].execute(
                     () -> executeDelivery(
                             request,
-                            tracker
+                            tracker,
+                            enqueuedAtNanos
                     )
             );
 
@@ -137,6 +140,7 @@ public final class StripedDeliveryDispatcher {
 
             runtimeState.incrementRejected();
             runtimeState.incrementQueueRejected();
+            metrics.deliveryRejected();
             metrics.queueRejected();
 
             log.warn(
@@ -205,7 +209,26 @@ public final class StripedDeliveryDispatcher {
         return lanes.length;
     }
 
-    private void executeDelivery(DeliveryRequest request, ScenarioDeliveryTracker tracker) {
+    public int workerCapacity() {
+        return lanes.length;
+    }
+
+    public long totalQueueCapacity() {
+        return (long) lanes.length * properties.queueCapacityPerLane();
+    }
+
+    public long maxOutstandingPayloadBytes() {
+        return properties.maxOutstandingPayloadBytes();
+    }
+
+    private void executeDelivery(
+        DeliveryRequest request,
+        ScenarioDeliveryTracker tracker,
+        long enqueuedAtNanos
+    ) {
+        var queueWaitNanos = System.nanoTime() - enqueuedAtNanos;
+        metrics.recordQueueWaitDuration(queueWaitNanos);
+
         try {
             for (int i = 0; i < request.copies(); i++) {
                 deliverOnce(request);
@@ -219,6 +242,8 @@ public final class StripedDeliveryDispatcher {
     }
 
     private void deliverOnce(DeliveryRequest request) {
+        long startedAtNanos = System.nanoTime();
+
         try {
             eventDeliveryPort.deliver(
                     request.scenario(),
@@ -239,6 +264,9 @@ public final class StripedDeliveryDispatcher {
                     request.event().eventId(),
                     e
             );
+        } finally {
+            long durationNanos = System.nanoTime() - startedAtNanos;
+            metrics.recordDeliveryDuration(durationNanos);
         }
     }
 
@@ -348,5 +376,14 @@ public final class StripedDeliveryDispatcher {
                 lane.shutdownNow();
             }
         }
+    }
+
+    // METRICS
+    public int activeWorkers(int lane) {
+        return lanes[lane].getActiveCount();
+    }
+
+    public int queueCapacity(int lane) {
+        return properties.queueCapacityPerLane();
     }
 }

@@ -1,0 +1,79 @@
+groups:
+  - name: candle-stack-generator
+    rules:
+      - alert: GeneratorDown
+        expr: up{job="generator"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: generator
+        annotations:
+          summary: Generator instance is unavailable
+          description: "Prometheus has been unable to scrape {{ $labels.instance }} for one minute."
+
+      - alert: GeneratorDeliveryFailureRateHigh
+        expr: |
+          sum(rate(generator_delivery_failure_total{job="generator"}[5m]))
+          /
+          clamp_min(
+            sum(rate(generator_delivery_success_total{job="generator"}[5m]))
+            + sum(rate(generator_delivery_failure_total{job="generator"}[5m])),
+            0.001
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: generator
+        annotations:
+          summary: Generator delivery failure rate is above 5%
+          description: "More than 5% of generator HTTP delivery attempts have failed for five minutes."
+
+      - alert: GeneratorDeliveryRejections
+        expr: sum(rate(generator_delivery_rejected_total{job="generator"}[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: generator
+        annotations:
+          summary: Generator deliveries are being rejected
+          description: "The generator dispatcher has continuously rejected delivery tasks for five minutes."
+
+      - alert: GeneratorLaneQueueSaturationHigh
+        expr: max(generator_delivery_lane_queue_depth{job="generator"} / generator_delivery_lane_queue_capacity{job="generator"}) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: generator
+        annotations:
+          summary: Generator lane queue utilization is above 80%
+          description: "At least one delivery lane has remained above 80% queue utilization for five minutes."
+
+      - alert: GeneratorPayloadBudgetSaturationHigh
+        expr: sum(generator_delivery_outstanding_payload_bytes{job="generator"}) / sum(generator_delivery_outstanding_payload_capacity_bytes{job="generator"}) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: generator
+        annotations:
+          summary: Generator payload byte budget is above 80%
+          description: "Outstanding delivery payloads have consumed more than 80% of the configured byte budget for five minutes."
+
+      - alert: GeneratorDeliveryLatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(generator_delivery_duration_seconds_bucket{job="generator"}[5m]))) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: generator
+        annotations:
+          summary: Generator p95 delivery latency is above 500 ms
+          description: "Generator HTTP delivery p95 latency has exceeded 500 ms for five minutes."
+
+      - alert: GeneratorQueueWaitHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(generator_delivery_queue_wait_seconds_bucket{job="generator"}[5m]))) > 0.25
+        for: 5m
+        labels:
+          severity: warning
+          service: generator
+        annotations:
+          summary: Generator p95 queue wait is above 250 ms
+          description: "Generator delivery queue-wait p95 has exceeded 250 ms for five minutes."

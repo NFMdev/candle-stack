@@ -40,6 +40,26 @@ public final class DeliveryMetricsBinder implements MeterBinder {
             .register(registry);
 
         Gauge.builder(
+                "generator.delivery.worker.capacity",
+                dispatcher,
+                StripedDeliveryDispatcher::workerCapacity
+            )
+            .description(
+                "Maximum number of delivery workers"
+            )
+            .register(registry);
+
+        Gauge.builder(
+                "generator.delivery.queue.capacity",
+                dispatcher,
+                StripedDeliveryDispatcher::totalQueueCapacity
+            )
+            .description(
+                "Maximum number of delivery tasks across all lane queues"
+            )
+            .register(registry);
+
+        Gauge.builder(
                 "generator.delivery.outstanding.payload.bytes",
                 dispatcher,
                 StripedDeliveryDispatcher::outstandingPayloadBytes
@@ -50,20 +70,46 @@ public final class DeliveryMetricsBinder implements MeterBinder {
             .baseUnit("bytes")
             .register(registry);
 
+        Gauge.builder(
+                "generator.delivery.outstanding.payload.capacity",
+                dispatcher,
+                StripedDeliveryDispatcher::maxOutstandingPayloadBytes
+            )
+            .description(
+                "Maximum permitted outstanding payload bytes"
+            )
+            .baseUnit("bytes")
+            .register(registry);
+
         for (int lane = 0; lane < dispatcher.lanes(); lane++) {
             int laneIndex = lane;
+            String laneTag = Integer.toString(laneIndex);
 
             Gauge.builder(
                     "generator.delivery.lane.queue.depth",
-                    () -> dispatcher.queueDepth(laneIndex)
+                    dispatcher,
+                    d -> d.queueDepth(laneIndex)
                 )
-                .description(
-                    "Number of queued delivery tasks in a delivery lane"
+                .description("Number of queued delivery tasks in a lane")
+                .tag("lane", laneTag)
+                .register(registry);
+
+            Gauge.builder(
+                    "generator.delivery.lane.queue.capacity",
+                    dispatcher,
+                    d -> d.queueCapacity(laneIndex)
                 )
-                .tag(
-                    "lane",
-                    Integer.toString(laneIndex)
+                .description("Maximum number of queued tasks in a lane")
+                .tag("lane", laneTag)
+                .register(registry);
+
+            Gauge.builder(
+                    "generator.delivery.lane.active.workers",
+                    dispatcher,
+                    d -> d.activeWorkers(laneIndex)
                 )
+                .description("Number of active delivery workers in a lane")
+                .tag("lane", laneTag)
                 .register(registry);
         }
     }

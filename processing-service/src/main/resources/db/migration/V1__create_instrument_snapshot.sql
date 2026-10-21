@@ -10,7 +10,7 @@ CREATE TABLE instrument_snapshot (
     day_low         NUMERIC(19,8)   NOT NULL,
     trade_count     BIGINT          NOT NULL,
     updated_at      TIMESTAMP      NOT NULL,
-    currency        VARCHAR(16)     NOT NULL
+    currency        VARCHAR(16)     NOT NULL,
 
     CONSTRAINT chk_instrument_snapshot_last_price_positive
         CHECK (last_price > 0),

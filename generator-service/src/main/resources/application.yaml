@@ -22,13 +22,40 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,prometheus,metrics
   endpoint:
     health:
       probes:
         enabled: true
       show-details: always
   metrics:
+    distribution:
+        percentiles-histogram:
+          http.server.requests: true
+          generator.delivery.duration: true
+          generator.delivery.queue.wait: true
+          jvm.gc.pause: true
+
+        minimum-expected-value:
+            generator.delivery.duration: 1ms
+            generator.delivery.queue.wait: 1ms
+            jvm.gc.pause: 1ms
+
+        maximum-expected-value:
+          generator.delivery.duration: 10s
+          generator.delivery.queue.wait: 10s
+          jvm.gc.pause: 10s
+
+        slo:
+          generator.delivery.duration:
+            - 10ms
+            - 25ms
+            - 50ms
+            - 100ms
+            - 250ms
+            - 500ms
+            - 1s
+            - 5s
     tags:
       application: ${spring.application.name}
 
